@@ -19,7 +19,7 @@ Visit <http://www.space-invaders.hollyer.me.uk>
 or
 
 ```bash
-git https://github.com/phollyer/elm-space-invaders
+git clone https://github.com/phollyer/elm-space-invaders.git
 cd elm-space-invaders
 elm reactor
 ```
