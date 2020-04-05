@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <script src="howler.js"></script>
+  <script src="localDataStorage-1.2.0.min.js"></script>
+  <script src="elm.js"></script>
+  <title>Space Invaders</title>
+</head>
+
+<body>
+  <div id="elm">
+    <script>
+      var self = this
+
+      var highscores = localDataStorage('highscores')
+      var total = highscores.get("total")
+      var scores = []
+      for( var i = 0; i < total - 1; i++) {
+        scores[i] = highscores.get(i + 1)
+      }
+
+
+      var app = Elm.Main.init(
+        { node: document.getElementById('elm'),
+          flags:
+            { viewport:
+              { height: window.innerHeight,
+                width: window.innerWidth
+              },
+              highscores: scores
+            }
+        }
+      );
+
+      app.ports.saveHighscores.subscribe(function(scores) {
+        var i = 1
+        scores.forEach( score => highscores.set(i++,score))
+        highscores.set("total", i)
+      })
+
+      var playingSFX =
+        { mothership: false }
+
+      app.ports.playSFX.subscribe(function(sfx){
+        if(sfx == "mothership") {
+          if(playingSFX.mothership == false) {
+            playingSFX.mothership = true
+            mothership.play()
+          }
+        } else {
+          self[sfx].stop()
+          self[sfx].play()
+        }
+      })
+
+      app.ports.stopSFX.subscribe(function(sfx){
+        playingSFX[sfx] = false
+        self[sfx].stop()
+      })
+
+      var fire = new Howl({
+        src: ['sfx/fire.wav'],
+        preload: true
+      });
+      var hitMothership = new Howl({
+        src: ['sfx/hitMothership.wav'],
+        preload: true
+      });
+      var hitPlayer = new Howl({
+        src: ['sfx/hitPlayer.wav'],
+        preload: true
+      });
+      var hitAlien = new Howl({
+        src: ['sfx/hitAlien.wav'],
+        preload: true
+      });
+      var hitBunker = new Howl({
+        src: ['sfx/hitBunker.wav'],
+        preload: true
+      });
+      var mothership = new Howl({
+        src: ['sfx/mothership.wav'],
+        loop: true,
+        volume: 0.2,
+        preload: true
+      });
+      var stepLeft1 = new Howl({
+        src: ['sfx/step1.wav'],
+        preload: true
+      });
+      var stepRight1 = new Howl({
+        src: ['sfx/step2.wav'],
+        preload: true
+      });
+      var stepLeft2 = new Howl({
+        src: ['sfx/step2.wav'],
+        preload: true
+      });
+      var stepRight2 = new Howl({
+        src: ['sfx/step3.wav'],
+        preload: true
+      });
+      var stepLeft3 = new Howl({
+        src: ['sfx/step3.wav'],
+        preload: true
+      });
+      var stepRight3 = new Howl({
+        src: ['sfx/step4.wav'],
+        preload: true
+      });
+      var stepLeft4 = new Howl({
+        src: ['sfx/step1.wav'],
+        preload: true
+      });
+      var stepRight4 = new Howl({
+        src: ['sfx/step4.wav'],
+        preload: true
+      });
+    </script>
+  </div>
+</body>
+
+</html>

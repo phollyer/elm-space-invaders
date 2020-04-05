@@ -1,0 +1,13 @@
+# Elm build artifacts
+elm-stuff
+elm.js
+
+# Json lock files
+*-lock.json
+
+# Apple
+.DS_Store
+
+*.key
+
+

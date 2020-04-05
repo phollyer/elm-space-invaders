@@ -1,0 +1,12 @@
+{
+  "root": "../src",
+  "tests":
+    ["Shared.BoundingBox",
+     "Shared.HitTest",
+     "Shared.Level",
+     "Shared.Movement",
+     "Shared.Players",
+     "Shared.Point",
+     "Shared.Scores"
+    ]
+}
