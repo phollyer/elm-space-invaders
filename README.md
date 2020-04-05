@@ -19,8 +19,8 @@ Visit <http://www.space-invaders.hollyer.me.uk>
 or
 
 ```bash
-git clone https://github.com/phollyer/elm-games.git
-cd elm-games
+git https://github.com/phollyer/elm-space-invaders
+cd elm-space-invaders
 elm reactor
 ```
 
