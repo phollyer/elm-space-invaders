@@ -21,8 +21,10 @@ or
 ```bash
 git clone https://github.com/phollyer/elm-space-invaders.git
 cd elm-space-invaders
+./make.sh
 elm reactor
 ```
+Then navigate to `public/index.html`
 
 ## Note
 
