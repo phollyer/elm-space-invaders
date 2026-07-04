@@ -4,6 +4,7 @@ module SpaceInvaders.Logic exposing
     , Msg, update, updateTouch
     , subscriptions
     , alienLasers, aliens, bunkers, difficulty, laser, mothership, mothershipLasers, players, ship, state
+    , cacheConfig, cacheError, setCacheError
     )
 
 {-| The game logic.
@@ -33,11 +34,11 @@ module SpaceInvaders.Logic exposing
 -}
 
 import Browser.Events exposing (onAnimationFrameDelta)
+import Http
 import Shared.BoundingBox as BoundingBox exposing (BoundingBox)
 import Shared.Level as Level exposing (Difficulty, Level)
 import Shared.Movement as Movement
 import Shared.Players as Players exposing (GameState(..), Player, Players)
-import Shared.Scores as Scores
 import SpaceInvaders.Assets.Aliens as Aliens exposing (Aliens)
 import SpaceInvaders.Assets.Bunkers as Bunkers exposing (Bunkers)
 import SpaceInvaders.Assets.HitTest as HitTest
@@ -45,11 +46,12 @@ import SpaceInvaders.Assets.Laser as Laser exposing (Laser)
 import SpaceInvaders.Assets.Lasers as Lasers exposing (Lasers)
 import SpaceInvaders.Assets.Mothership as Mothership exposing (Mothership)
 import SpaceInvaders.Assets.Ship as Ship exposing (Ship)
-import SpaceInvaders.Cache as Cache
 import SpaceInvaders.Configs as Configs
 import SpaceInvaders.Controls.Controls as Controls
+import SpaceInvaders.Highscores as Highscores
 import SpaceInvaders.PlayerState as PlayerState
 import SpaceInvaders.SFX as SFX exposing (SFX, Sound(..), Status(..))
+import String
 import Time
 
 
@@ -91,6 +93,8 @@ type GameData
         , animateDelta : Float
         , difficulty : Difficulty
         , level : Level
+        , cacheConfig : Highscores.Config
+        , cacheError : Maybe String
         , players : Players PlayerState.State
         , state : GameState
 
@@ -105,8 +109,8 @@ type GameData
 
 {-| All the initial settings for the game.
 -}
-init : Level -> Difficulty -> Players PlayerState.State -> GameData
-init level_ difficulty_ players_ =
+init : Level -> Difficulty -> Highscores.Config -> Players PlayerState.State -> GameData
+init level_ difficulty_ cacheConfig_ players_ =
     GameData
         { aliens =
             difficulty_
@@ -117,6 +121,8 @@ init level_ difficulty_ players_ =
         , difficulty = difficulty_
         , laser = Laser.init "yellow" 10
         , level = level_
+        , cacheConfig = cacheConfig_
+        , cacheError = Nothing
         , mothership = Mothership.init
         , mothershipLasers = Lasers.init
         , players = players_
@@ -143,6 +149,7 @@ type Msg
     | NextPlayerMsg Time.Posix
     | PlayerIntroduced Time.Posix
     | GameOverMsg Time.Posix
+    | HighscoresSaved (Result Http.Error ())
 
 
 {-| -}
@@ -359,6 +366,9 @@ update msg game =
                     game
                         |> players
                         |> Players.gameOverForCurrentPlayer
+
+                scoreToSave =
+                    currentScoreForSave players_
             in
             ( game
                 |> updatePlayers
@@ -367,15 +377,28 @@ update msg game =
                     GameOver
                 |> storePlayerState
             , [ players_
-                    |> Players.highscores
-                    |> Scores.prepareForSave
-                    |> Cache.saveHighscores
+                    |> always scoreToSave
+                    |> Highscores.saveHighscore
+                        (cacheConfig game)
+                        HighscoresSaved
               , SFX.init
                     |> SFX.add
                         (SFX.Mothership Stop)
                     |> SFX.execute
               ]
                 |> Cmd.batch
+            )
+
+        HighscoresSaved (Ok _) ->
+            ( setCacheError Nothing game
+            , Cmd.none
+            )
+
+        HighscoresSaved (Err err) ->
+            ( setCacheError
+                (Just ("Could not save highscores to backend: " ++ httpErrorToString err))
+                game
+            , Cmd.none
             )
 
         ControlsMsg ctrlMsg ->
@@ -647,6 +670,55 @@ subscriptions game =
 
         _ ->
             controls
+
+
+currentScoreForSave : Players PlayerState.State -> { name : String, points : Int }
+currentScoreForSave players_ =
+    let
+        currentPlayer =
+            Players.current players_
+
+        normalizedName =
+            currentPlayer
+                |> Players.name
+                |> String.trim
+                |> String.left 12
+
+        fallbackName =
+            "PLAYER "
+                ++ (currentPlayer
+                        |> Players.number
+                        |> String.fromInt
+                   )
+    in
+    { name =
+        if String.isEmpty normalizedName then
+            fallbackName
+
+        else
+            normalizedName
+    , points =
+        Players.points currentPlayer
+    }
+
+
+httpErrorToString : Http.Error -> String
+httpErrorToString err =
+    case err of
+        Http.BadUrl url ->
+            "bad URL: " ++ url
+
+        Http.Timeout ->
+            "request timed out"
+
+        Http.NetworkError ->
+            "network error"
+
+        Http.BadStatus statusCode ->
+            "HTTP " ++ String.fromInt statusCode
+
+        Http.BadBody message ->
+            "bad response body: " ++ message
 
 
 
@@ -1307,6 +1379,24 @@ bunkers (GameData gameData) =
 difficulty : GameData -> Difficulty
 difficulty (GameData gameData) =
     gameData.difficulty
+
+
+cacheConfig : GameData -> Highscores.Config
+cacheConfig (GameData gameData) =
+    gameData.cacheConfig
+
+
+cacheError : GameData -> Maybe String
+cacheError (GameData gameData) =
+    gameData.cacheError
+
+
+setCacheError : Maybe String -> GameData -> GameData
+setCacheError cacheError_ (GameData gameData) =
+    GameData
+        { gameData
+            | cacheError = cacheError_
+        }
 
 
 {-| -}

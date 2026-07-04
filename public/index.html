@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <script src="howler.js"></script>
-  <script src="localDataStorage-1.2.0.min.js"></script>
   <script src="elm.js"></script>
   <title>Space Invaders</title>
 </head>
@@ -15,39 +14,32 @@
   <div id="elm">
     <script>
       var self = this
-
-      var highscores = localDataStorage('highscores')
-      var total = highscores.get("total")
-      var scores = []
-      for( var i = 0; i < total - 1; i++) {
-        scores[i] = highscores.get(i + 1)
-      }
-
-
       var app = Elm.Main.init(
-        { node: document.getElementById('elm'),
+        {
+          node: document.getElementById('elm'),
           flags:
-            { viewport:
-              { height: window.innerHeight,
-                width: window.innerWidth
-              },
-              highscores: scores
+          {
+            viewport:
+            {
+              height: window.innerHeight,
+              width: window.innerWidth
+            },
+            cache:
+            {
+              readEndpoint: "https://saxzyyqwfxwpnsrhfkmg.supabase.co/rest/v1/highscores?select=name,points&order=points.desc.nullslast&limit=10",
+              writeEndpoint: "https://saxzyyqwfxwpnsrhfkmg.supabase.co/rest/v1/highscores",
+              anonKey: "sb_publishable_NurfkqXVSHeD7pepp680Lw_9e_PE2-1"
             }
+          }
         }
       );
-
-      app.ports.saveHighscores.subscribe(function(scores) {
-        var i = 1
-        scores.forEach( score => highscores.set(i++,score))
-        highscores.set("total", i)
-      })
 
       var playingSFX =
         { mothership: false }
 
-      app.ports.playSFX.subscribe(function(sfx){
-        if(sfx == "mothership") {
-          if(playingSFX.mothership == false) {
+      app.ports.playSFX.subscribe(function (sfx) {
+        if (sfx == "mothership") {
+          if (playingSFX.mothership == false) {
             playingSFX.mothership = true
             mothership.play()
           }
@@ -57,7 +49,7 @@
         }
       })
 
-      app.ports.stopSFX.subscribe(function(sfx){
+      app.ports.stopSFX.subscribe(function (sfx) {
         playingSFX[sfx] = false
         self[sfx].stop()
       })

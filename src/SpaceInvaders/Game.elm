@@ -36,10 +36,12 @@ module SpaceInvaders.Game exposing
 -}
 
 import Element exposing (Element)
-import ResponsiveUI as RUI exposing (MaxWidth, MinWidth)
+import Http
+import ResponsiveUI as RUI
 import Shared.Level as Level exposing (Difficulty(..))
 import Shared.Players as Players exposing (Highscores(..), Lives(..))
 import SpaceInvaders.Controls.Controls as Controls
+import SpaceInvaders.Highscores as Highscores
 import SpaceInvaders.Logic as Logic exposing (GameData)
 import SpaceInvaders.Screens.InPlay as InPlay
 import SpaceInvaders.Screens.Start as StartScreen
@@ -65,28 +67,34 @@ type alias Flags =
         { height : Float
         , width : Float
         }
-    , highscores :
-        List
-            { name : String
-            , points : Int
-            }
+    , cache :
+        { readEndpoint : String
+        , writeEndpoint : String
+        , anonKey : String
+        }
     }
 
 
 {-| -}
-init : Flags -> Model
+init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
+        cacheConfig =
+            { readEndpoint = flags.cache.readEndpoint
+            , writeEndpoint = flags.cache.writeEndpoint
+            , anonKey = flags.cache.anonKey
+            }
+
         players =
             Players.init
                 (Lives 3)
                 (Highscores
-                    { list = flags.highscores
+                    { list = []
                     , max = 10
                     }
                 )
     in
-    StartScreen
+    ( StartScreen
         (StartScreen.init
             Easy
             players
@@ -101,8 +109,13 @@ init flags =
         (Logic.init
             Level.init
             Easy
+            cacheConfig
             players
         )
+    , Highscores.loadHighscores
+        cacheConfig
+        HighscoresLoaded
+    )
 
 
 
@@ -115,6 +128,7 @@ type Msg
     | InPlayMsg Controls.Touch
     | LogicMsg Logic.Msg
     | ResponsiveMsg RUI.Msg
+    | HighscoresLoaded (Result Http.Error (List { name : String, points : Int }))
 
 
 {-| -}
@@ -124,45 +138,30 @@ update msg model =
         ( StartScreenMsg startMsg, StartScreen subModel viewport gameData ) ->
             let
                 ( startModel, cmd ) =
-                    subModel
-                        |> StartScreen.update
-                            startMsg
+                    StartScreen.update startMsg subModel
             in
-            case startModel |> StartScreen.start of
-                True ->
-                    ( InPlay
-                        viewport
-                        (startModel
-                            |> StartScreen.players
-                            |> Logic.init
-                                Level.init
-                                (startModel
-                                    |> StartScreen.difficulty
-                                )
-                        )
-                    , cmd
-                        |> Cmd.map
-                            StartScreenMsg
+            if StartScreen.start startModel then
+                ( InPlay
+                    viewport
+                    (Logic.init Level.init
+                        (StartScreen.difficulty startModel)
+                        (Logic.cacheConfig gameData)
+                        (StartScreen.players startModel)
                     )
+                , Cmd.map StartScreenMsg cmd
+                )
 
-                False ->
-                    ( StartScreen
-                        startModel
-                        viewport
-                        gameData
-                    , cmd
-                        |> Cmd.map
-                            StartScreenMsg
-                    )
+            else
+                ( StartScreen startModel viewport gameData
+                , Cmd.map StartScreenMsg cmd
+                )
 
         ( InPlayMsg inPlayMsg, InPlay viewport gameData ) ->
             let
                 ( gameUpdated, cmd ) =
-                    gameData
-                        |> Logic.updateTouch
-                            inPlayMsg
+                    Logic.updateTouch inPlayMsg gameData
             in
-            case gameUpdated |> Logic.state of
+            case Logic.state gameUpdated of
                 Logic.Quit ->
                     ( gameUpdated, cmd )
                         |> start
@@ -226,6 +225,64 @@ update msg model =
                     , Cmd.none
                     )
 
+        ( HighscoresLoaded (Ok loadedHighscores), StartScreen startModel viewport gameData ) ->
+            let
+                difficulty_ =
+                    startModel
+                        |> StartScreen.difficulty
+
+                players_ =
+                    Players.init
+                        (Lives 3)
+                        (Highscores
+                            { list = loadedHighscores
+                            , max = 10
+                            }
+                        )
+            in
+            ( StartScreen
+                (StartScreen.init
+                    difficulty_
+                    players_
+                )
+                viewport
+                (Logic.init
+                    Level.init
+                    difficulty_
+                    (Logic.cacheConfig gameData)
+                    players_
+                )
+            , Cmd.none
+            )
+
+        ( HighscoresLoaded (Err err), _ ) ->
+            case model of
+                StartScreen startModel viewport gameData ->
+                    ( StartScreen
+                        startModel
+                        viewport
+                        (gameData
+                            |> Logic.setCacheError
+                                (Just ("Could not load highscores from backend: " ++ httpErrorToString err))
+                        )
+                    , Cmd.none
+                    )
+
+                InPlay viewport gameData ->
+                    ( InPlay
+                        viewport
+                        (gameData
+                            |> Logic.setCacheError
+                                (Just ("Could not load highscores from backend: " ++ httpErrorToString err))
+                        )
+                    , Cmd.none
+                    )
+
+        ( HighscoresLoaded (Ok _), InPlay _ _ ) ->
+            ( model
+            , Cmd.none
+            )
+
         _ ->
             ( model
             , Cmd.none
@@ -255,10 +312,36 @@ start rui_ ( gameData, cmd ) =
         )
         rui_
         gameData
-    , cmd
-        |> Cmd.map
-            LogicMsg
+    , Cmd.batch
+        [ cmd
+            |> Cmd.map
+                LogicMsg
+        , Highscores.loadHighscores
+            (gameData
+                |> Logic.cacheConfig
+            )
+            HighscoresLoaded
+        ]
     )
+
+
+httpErrorToString : Http.Error -> String
+httpErrorToString err =
+    case err of
+        Http.BadUrl url ->
+            "bad URL: " ++ url
+
+        Http.Timeout ->
+            "request timed out"
+
+        Http.NetworkError ->
+            "network error"
+
+        Http.BadStatus statusCode ->
+            "HTTP " ++ String.fromInt statusCode
+
+        Http.BadBody message ->
+            "bad response body: " ++ message
 
 
 
@@ -269,7 +352,7 @@ start rui_ ( gameData, cmd ) =
 view : Model -> Element Msg
 view model =
     case model of
-        StartScreen subModel rui_ _ ->
+        StartScreen subModel rui_ gameData ->
             subModel
                 |> StartScreen.view
                     (rui_
@@ -277,6 +360,10 @@ view model =
                     )
                 |> Element.map
                     StartScreenMsg
+                |> withCacheError
+                    (gameData
+                        |> Logic.cacheError
+                    )
 
         InPlay rui_ gameData ->
             gameData
@@ -286,6 +373,26 @@ view model =
                     )
                 |> Element.map
                     InPlayMsg
+                |> withCacheError
+                    (gameData
+                        |> Logic.cacheError
+                    )
+
+
+withCacheError : Maybe String -> Element Msg -> Element Msg
+withCacheError maybeError content =
+    case maybeError of
+        Nothing ->
+            content
+
+        Just errorMessage ->
+            Element.column
+                [ Element.width Element.fill ]
+                [ Element.el
+                    [ Element.padding 8 ]
+                    (Element.text ("Backend error: " ++ errorMessage))
+                , content
+                ]
 
 
 
