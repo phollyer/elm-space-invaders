@@ -19,6 +19,7 @@ module Shared.Players exposing
     , total, multiple, all, current, playerNumber
     , NoStoredState
     , GameState(..), storeStateForCurrentPlayer, stateForCurrentPlayer, storeStateForPlayer, stateForPlayer, storeState, state
+    , setHighscores
     )
 
 {-| A module to manage one or more players in a game.
@@ -1732,6 +1733,18 @@ extraLife player_ =
 highscores : Players a -> Scores.Scores
 highscores (Players players) =
     players.highscores
+
+
+setHighscores : List { name : String, points : Int } -> Players a -> Players a
+setHighscores highscores_ players =
+    updateHighscores
+        (Scores.init
+            (Scores.total <|
+                highscores players
+            )
+            highscores_
+        )
+        players
 
 
 {-| Get the [Score](Shared.Scores#Score) for the current [Player](#Player).

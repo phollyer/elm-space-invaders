@@ -22,11 +22,12 @@ import SpaceInvaders.Game as SpaceInvaders
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-    ( SpaceInvaders
-        (SpaceInvaders.init
-            flags
-        )
-    , Cmd.none
+    let
+        ( game, cmd ) =
+            SpaceInvaders.init flags
+    in
+    ( SpaceInvaders game
+    , Cmd.map SpaceInvadersMsg cmd
     )
 
 
@@ -37,11 +38,11 @@ type alias Flags =
         { height : Float
         , width : Float
         }
-    , highscores :
-        List
-            { name : String
-            , points : Int
-            }
+    , cache :
+        { readEndpoint : String
+        , writeEndpoint : String
+        , anonKey : String
+        }
     }
 
 
