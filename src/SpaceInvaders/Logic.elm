@@ -35,7 +35,6 @@ module SpaceInvaders.Logic exposing
 
 import Browser.Events exposing (onAnimationFrameDelta)
 import Http
-import Shared.BoundingBox as BoundingBox exposing (BoundingBox)
 import Shared.Level as Level exposing (Difficulty, Level)
 import Shared.Movement as Movement
 import Shared.Players as Players exposing (GameState(..), Player, Players)
@@ -305,8 +304,7 @@ update msg game =
                 |> updateAliens
                     (game
                         |> aliens
-                        |> Aliens.loadLasers
-                            indices
+                        |> Aliens.loadLasers indices
                     )
             , Cmd.none
             )
@@ -315,15 +313,10 @@ update msg game =
             ( game
                 |> updateAliens
                     (Aliens.init
-                        (game
-                            |> level
-                        )
-                        (game
-                            |> difficulty
-                        )
+                        (level game)
+                        (difficulty game)
                     )
-                |> updateBunkers
-                    Bunkers.init
+                |> updateBunkers Bunkers.init
                 |> lifeLost
                 |> storePlayerState
                 |> nextPlayer
@@ -336,14 +329,12 @@ update msg game =
                 |> storePlayerState
                 |> nextPlayer
             , SFX.init
-                |> SFX.add
-                    (SFX.Mothership Stop)
+                |> SFX.add (SFX.Mothership Stop)
                 |> SFX.execute
             )
 
         NextPlayerMsg _ ->
-            ( game
-                |> nextPlayer
+            ( nextPlayer game
             , Cmd.none
             )
 
@@ -371,22 +362,17 @@ update msg game =
                     currentScoreForSave players_
             in
             ( game
-                |> updatePlayers
-                    players_
-                |> updateState
-                    GameOver
+                |> updatePlayers players_
+                |> updateState GameOver
                 |> storePlayerState
-            , [ players_
+            , Cmd.batch
+                [ players_
                     |> always scoreToSave
-                    |> Highscores.saveHighscore
-                        (cacheConfig game)
-                        HighscoresSaved
-              , SFX.init
-                    |> SFX.add
-                        (SFX.Mothership Stop)
+                    |> Highscores.saveHighscore (cacheConfig game) HighscoresSaved
+                , SFX.init
+                    |> SFX.add (SFX.Mothership Stop)
                     |> SFX.execute
-              ]
-                |> Cmd.batch
+                ]
             )
 
         HighscoresSaved (Ok _) ->
@@ -444,29 +430,28 @@ update msg game =
                     )
 
                 Controls.KeyDown Controls.SpaceBar ->
-                    case game |> laser |> Laser.isActive of
-                        True ->
-                            ( game
-                            , Cmd.none
-                            )
+                    if game |> laser |> Laser.isActive then
+                        ( game
+                        , Cmd.none
+                        )
 
-                        False ->
-                            ( game
-                                |> updateLaser
-                                    (game
-                                        |> laser
-                                        |> Laser.load
-                                            (game
-                                                |> ship
-                                                |> Ship.fire
-                                            )
-                                        |> Laser.fire
-                                    )
-                            , SFX.init
-                                |> SFX.add
-                                    Fire
-                                |> SFX.execute
-                            )
+                    else
+                        ( game
+                            |> updateLaser
+                                (game
+                                    |> laser
+                                    |> Laser.load
+                                        (game
+                                            |> ship
+                                            |> Ship.fire
+                                        )
+                                    |> Laser.fire
+                                )
+                        , SFX.init
+                            |> SFX.add
+                                Fire
+                            |> SFX.execute
+                        )
 
                 Controls.KeyDown Controls.Pause ->
                     ( game
@@ -540,29 +525,28 @@ updateTouch touchMsg game =
             )
 
         Controls.TouchFire _ ->
-            case game |> laser |> Laser.isActive of
-                True ->
-                    ( game
-                    , Cmd.none
-                    )
+            if game |> laser |> Laser.isActive then
+                ( game
+                , Cmd.none
+                )
 
-                False ->
-                    ( game
-                        |> updateLaser
-                            (game
-                                |> laser
-                                |> Laser.load
-                                    (game
-                                        |> ship
-                                        |> Ship.fire
-                                    )
-                                |> Laser.fire
-                            )
-                    , SFX.init
-                        |> SFX.add
-                            Fire
-                        |> SFX.execute
-                    )
+            else
+                ( game
+                    |> updateLaser
+                        (game
+                            |> laser
+                            |> Laser.load
+                                (game
+                                    |> ship
+                                    |> Ship.fire
+                                )
+                            |> Laser.fire
+                        )
+                , SFX.init
+                    |> SFX.add
+                        Fire
+                    |> SFX.execute
+                )
 
         Controls.TouchPause _ ->
             ( game
@@ -611,7 +595,7 @@ subscriptions game =
                 |> Sub.map
                     ControlsMsg
     in
-    case game |> state of
+    case state game of
         Playing ->
             Sub.batch
                 [ controls
@@ -623,49 +607,41 @@ subscriptions game =
                 ]
 
         AliensReachedGround ->
-            case game |> players |> Players.current |> Players.lastLife of
-                True ->
-                    Sub.batch
-                        [ controls
-                        , GameOverMsg
-                            |> Time.every 10
-                        ]
+            if game |> players |> Players.current |> Players.lastLife then
+                Sub.batch
+                    [ controls
+                    , Time.every 10 GameOverMsg
+                    ]
 
-                False ->
-                    Sub.batch
-                        [ controls
-                        , AliensReachedGroundMsg
-                            |> Time.every 1500
-                        ]
+            else
+                Sub.batch
+                    [ controls
+                    , Time.every 1500 AliensReachedGroundMsg
+                    ]
 
         LifeLost ->
-            case game |> players |> Players.current |> Players.lastLife of
-                True ->
-                    Sub.batch
-                        [ controls
-                        , GameOverMsg
-                            |> Time.every 10
-                        ]
+            if game |> players |> Players.current |> Players.lastLife then
+                Sub.batch
+                    [ controls
+                    , Time.every 10 GameOverMsg
+                    ]
 
-                False ->
-                    Sub.batch
-                        [ controls
-                        , LifeLostMsg
-                            |> Time.every 1500
-                        ]
+            else
+                Sub.batch
+                    [ controls
+                    , Time.every 1500 LifeLostMsg
+                    ]
 
         IntroducingPlayer _ ->
             Sub.batch
                 [ controls
-                , PlayerIntroduced
-                    |> Time.every 2500
+                , Time.every 2500 PlayerIntroduced
                 ]
 
         GameOver ->
             Sub.batch
                 [ controls
-                , NextPlayerMsg
-                    |> Time.every 3000
+                , Time.every 3000 NextPlayerMsg
                 ]
 
         _ ->
@@ -768,14 +744,13 @@ moveLaser game =
                 |> Laser.maybeMove
                     (Movement.Up Configs.laser.velocity)
     in
-    case didMove of
-        True ->
-            game
-                |> updateLaser
-                    laser_
+    if didMove then
+        game
+            |> updateLaser
+                laser_
 
-        False ->
-            game
+    else
+        game
 
 
 moveAliens : GameData -> GameData
@@ -794,18 +769,17 @@ moveAliens game =
                     )
             )
         |> updateSfx
-            (case aliens_ |> Aliens.playSFX of
-                True ->
-                    game
-                        |> sfx
-                        |> SFX.add
-                            (aliens_
-                                |> Aliens.sfx
-                            )
+            (if Aliens.playSFX aliens_ then
+                game
+                    |> sfx
+                    |> SFX.add
+                        (aliens_
+                            |> Aliens.sfx
+                        )
 
-                False ->
-                    game
-                        |> sfx
+             else
+                game
+                    |> sfx
             )
 
 
@@ -874,33 +848,32 @@ detectPlayerHitAlien game =
                         |> aliens
                     )
     in
-    case hit of
-        True ->
-            game
-                |> updateAliens
-                    (aliens_
-                        |> Aliens.maybeChangeSpeed
-                    )
-                |> updateLaser
-                    (game
-                        |> laser
-                        |> Laser.didHit
-                    )
-                |> updatePlayers
-                    (game
-                        |> players
-                        |> Players.incrementScoreForCurrentPlayer
-                            points
-                    )
-                |> updateSfx
-                    (game
-                        |> sfx
-                        |> SFX.add
-                            HitAlien
-                    )
+    if hit then
+        game
+            |> updateAliens
+                (aliens_
+                    |> Aliens.maybeChangeSpeed
+                )
+            |> updateLaser
+                (game
+                    |> laser
+                    |> Laser.didHit
+                )
+            |> updatePlayers
+                (game
+                    |> players
+                    |> Players.incrementScoreForCurrentPlayer
+                        points
+                )
+            |> updateSfx
+                (game
+                    |> sfx
+                    |> SFX.add
+                        HitAlien
+                )
 
-        False ->
-            game
+    else
+        game
 
 
 detectPlayerHitMothership : GameData -> GameData
@@ -914,33 +887,32 @@ detectPlayerHitMothership game =
                         |> mothership
                     )
     in
-    case hit of
-        True ->
-            game
-                |> updateMothership
-                    Mothership.init
-                |> updateLaser
-                    (game
-                        |> laser
-                        |> Laser.didHit
-                    )
-                |> updatePlayers
-                    (game
-                        |> players
-                        |> Players.incrementScoreForCurrentPlayer
-                            points
-                    )
-                |> updateSfx
-                    (game
-                        |> sfx
-                        |> SFX.add
-                            HitMothership
-                        |> SFX.add
-                            (Mothership Stop)
-                    )
+    if hit then
+        game
+            |> updateMothership
+                Mothership.init
+            |> updateLaser
+                (game
+                    |> laser
+                    |> Laser.didHit
+                )
+            |> updatePlayers
+                (game
+                    |> players
+                    |> Players.incrementScoreForCurrentPlayer
+                        points
+                )
+            |> updateSfx
+                (game
+                    |> sfx
+                    |> SFX.add
+                        HitMothership
+                    |> SFX.add
+                        (Mothership Stop)
+                )
 
-        False ->
-            game
+    else
+        game
 
 
 detectPlayerHitBunker : GameData -> GameData
@@ -954,24 +926,23 @@ detectPlayerHitBunker game =
                         |> laser
                     )
     in
-    case hit of
-        True ->
-            game
-                |> updateBunkers bunkers_
-                |> updateLaser
-                    (game
-                        |> laser
-                        |> Laser.didHit
-                    )
-                |> updateSfx
-                    (game
-                        |> sfx
-                        |> SFX.add
-                            HitBunker
-                    )
+    if hit then
+        game
+            |> updateBunkers bunkers_
+            |> updateLaser
+                (game
+                    |> laser
+                    |> Laser.didHit
+                )
+            |> updateSfx
+                (game
+                    |> sfx
+                    |> SFX.add
+                        HitBunker
+                )
 
-        False ->
-            game
+    else
+        game
 
 
 detectPlayerHitByMothershipLaser : GameData -> GameData
@@ -985,24 +956,23 @@ detectPlayerHitByMothershipLaser game =
                         |> mothershipLasers
                     )
     in
-    case hit of
-        True ->
-            game
-                |> updateMothershipLasers lasers
-                |> updateShip
-                    (game
-                        |> ship
-                        |> Ship.kill
-                    )
-                |> updateSfx
-                    (game
-                        |> sfx
-                        |> SFX.add
-                            HitPlayer
-                    )
+    if hit then
+        game
+            |> updateMothershipLasers lasers
+            |> updateShip
+                (game
+                    |> ship
+                    |> Ship.kill
+                )
+            |> updateSfx
+                (game
+                    |> sfx
+                    |> SFX.add
+                        HitPlayer
+                )
 
-        False ->
-            game
+    else
+        game
 
 
 detectPlayerHitByAlienLaser : GameData -> GameData
@@ -1016,24 +986,23 @@ detectPlayerHitByAlienLaser game =
                         |> alienLasers
                     )
     in
-    case hit of
-        True ->
-            game
-                |> updateAlienLasers lasers
-                |> updateShip
-                    (game
-                        |> ship
-                        |> Ship.kill
-                    )
-                |> updateSfx
-                    (game
-                        |> sfx
-                        |> SFX.add
-                            HitPlayer
-                    )
+    if hit then
+        game
+            |> updateAlienLasers lasers
+            |> updateShip
+                (game
+                    |> ship
+                    |> Ship.kill
+                )
+            |> updateSfx
+                (game
+                    |> sfx
+                    |> SFX.add
+                        HitPlayer
+                )
 
-        False ->
-            game
+    else
+        game
 
 
 detectPlayerHitByAlien : GameData -> GameData
@@ -1047,27 +1016,26 @@ detectPlayerHitByAlien game =
                         |> aliens
                     )
     in
-    case hit of
-        True ->
-            game
-                |> updateAliens
-                    (aliens_
-                        |> Aliens.maybeChangeSpeed
-                    )
-                |> updateShip
-                    (game
-                        |> ship
-                        |> Ship.kill
-                    )
-                |> updateSfx
-                    (game
-                        |> sfx
-                        |> SFX.add
-                            HitPlayer
-                    )
+    if hit then
+        game
+            |> updateAliens
+                (aliens_
+                    |> Aliens.maybeChangeSpeed
+                )
+            |> updateShip
+                (game
+                    |> ship
+                    |> Ship.kill
+                )
+            |> updateSfx
+                (game
+                    |> sfx
+                    |> SFX.add
+                        HitPlayer
+                )
 
-        False ->
-            game
+    else
+        game
 
 
 detectBunkersHitByAliens : GameData -> GameData
@@ -1081,20 +1049,19 @@ detectBunkersHitByAliens game =
                         |> aliens
                     )
     in
-    case hit of
-        True ->
-            game
-                |> updateBunkers
-                    bunkers_
-                |> updateSfx
-                    (game
-                        |> sfx
-                        |> SFX.add
-                            HitBunker
-                    )
+    if hit then
+        game
+            |> updateBunkers
+                bunkers_
+            |> updateSfx
+                (game
+                    |> sfx
+                    |> SFX.add
+                        HitBunker
+                )
 
-        False ->
-            game
+    else
+        game
 
 
 detectBunkersHitByAlienLasers : GameData -> GameData
@@ -1108,22 +1075,21 @@ detectBunkersHitByAlienLasers game =
                         |> alienLasers
                     )
     in
-    case hit of
-        True ->
-            game
-                |> updateAlienLasers
-                    alienLasers_
-                |> updateBunkers
-                    bunkers_
-                |> updateSfx
-                    (game
-                        |> sfx
-                        |> SFX.add
-                            HitBunker
-                    )
+    if hit then
+        game
+            |> updateAlienLasers
+                alienLasers_
+            |> updateBunkers
+                bunkers_
+            |> updateSfx
+                (game
+                    |> sfx
+                    |> SFX.add
+                        HitBunker
+                )
 
-        False ->
-            game
+    else
+        game
 
 
 detectBunkersHitByMothershipLasers : GameData -> GameData
@@ -1137,22 +1103,21 @@ detectBunkersHitByMothershipLasers game =
                         |> mothershipLasers
                     )
     in
-    case hit of
-        True ->
-            game
-                |> updateMothershipLasers
-                    mothershipLasers_
-                |> updateBunkers
-                    bunkers_
-                |> updateSfx
-                    (game
-                        |> sfx
-                        |> SFX.add
-                            HitBunker
-                    )
+    if hit then
+        game
+            |> updateMothershipLasers
+                mothershipLasers_
+            |> updateBunkers
+                bunkers_
+            |> updateSfx
+                (game
+                    |> sfx
+                    |> SFX.add
+                        HitBunker
+                )
 
-        False ->
-            game
+    else
+        game
 
 
 
@@ -1233,33 +1198,28 @@ setState : GameData -> GameData
 setState game =
     let
         newState =
-            case game |> players |> Players.anyAlive of
-                False ->
-                    AllGamesOver
+            if game |> players |> Players.anyAlive then
+                if game |> players |> Players.current |> Players.anyLivesLeft then
+                    if game |> ship |> Ship.alive then
+                        if game |> aliens |> Aliens.anyLeft then
+                            if game |> aliens |> Aliens.aboveGround then
+                                game
+                                    |> state
 
-                True ->
-                    case game |> players |> Players.current |> Players.anyLivesLeft of
-                        False ->
-                            GameOver
+                            else
+                                AliensReachedGround
 
-                        True ->
-                            case game |> ship |> Ship.alive of
-                                False ->
-                                    LifeLost
+                        else
+                            MovingToNextLevel
 
-                                True ->
-                                    case game |> aliens |> Aliens.anyLeft of
-                                        False ->
-                                            MovingToNextLevel
+                    else
+                        LifeLost
 
-                                        True ->
-                                            case game |> aliens |> Aliens.aboveGround of
-                                                False ->
-                                                    AliensReachedGround
+                else
+                    GameOver
 
-                                                True ->
-                                                    game
-                                                        |> state
+            else
+                AllGamesOver
     in
     game
         |> updateState
@@ -1268,15 +1228,14 @@ setState game =
 
 nextPlayer : GameData -> GameData
 nextPlayer game =
-    case game |> players |> Players.anyAlive of
-        True ->
-            game
-                |> gotoNextPlayer
+    if game |> players |> Players.anyAlive then
+        game
+            |> gotoNextPlayer
 
-        False ->
-            game
-                |> updateState
-                    AllGamesOver
+    else
+        game
+            |> updateState
+                AllGamesOver
 
 
 gotoNextPlayer : GameData -> GameData
