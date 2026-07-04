@@ -70,6 +70,7 @@ type GameState
     | AllGamesOver
     | Pause
     | Quit
+    | SavingHighscores
 
 
 {-| A type representing all the Game data required to play the Game.
@@ -368,15 +369,27 @@ update msg game =
 
                         scoreToSave =
                             currentScoreForSave players_
+
+                        scoreQualifies =
+                            Players.isHighscore scoreToSave.points players_
+
+                        newState =
+                            if scoreQualifies then
+                                SavingHighscores
+
+                            else
+                                GameOver
                     in
                     ( game
                         |> updatePlayers players_
-                        |> updateState GameOver
+                        |> updateState newState
                         |> storePlayerState
                     , Cmd.batch
-                        [ players_
-                            |> always scoreToSave
-                            |> Highscores.saveHighscore (cacheConfig game) HighscoresSaved
+                        [ if scoreQualifies then
+                            Highscores.saveHighscore (cacheConfig game) HighscoresSaved scoreToSave
+
+                          else
+                            Cmd.none
                         , SFX.init
                             |> SFX.add (SFX.Mothership Stop)
                             |> SFX.execute
@@ -384,14 +397,17 @@ update msg game =
                     )
 
         HighscoresSaved (Ok _) ->
-            ( setCacheError Nothing game
+            ( game
+                |> updateState GameOver
+                |> setCacheError Nothing
             , Cmd.none
             )
 
         HighscoresSaved (Err err) ->
-            ( setCacheError
-                (Just ("Could not save highscores to backend: " ++ httpErrorToString err))
-                game
+            ( game
+                |> updateState GameOver
+                |> setCacheError
+                    (Just ("Could not save highscores to backend: " ++ httpErrorToString err))
             , Cmd.none
             )
 

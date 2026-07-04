@@ -8,6 +8,7 @@ module Shared.Scores exposing
     , highestToString
     , name, points, total
     , updateName
+    , isHighscore
     )
 
 {-| A module for managing game [Score](#Score)s and highscores.
@@ -436,16 +437,20 @@ gameOver score scores =
 
 
 qualifies : Score -> List Score -> Bool
-qualifies potential list_ =
+qualifies (Score potential) list_ =
     let
-        filteredList =
+        lowestScore =
             list_
-                |> List.filter
-                    (\score ->
-                        (score |> points) > (potential |> points)
-                    )
+                |> List.map (\(Score actual) -> actual.points)
+                |> List.minimum
+                |> Maybe.withDefault 0
     in
-    (filteredList |> List.length) /= (list_ |> List.length)
+    potential.points > lowestScore
+
+
+isHighscore : Int -> Scores -> Bool
+isHighscore score_ =
+    qualifies (Score { name = "", points = score_ }) << list
 
 
 

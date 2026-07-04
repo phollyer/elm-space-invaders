@@ -19,7 +19,7 @@ module Shared.Players exposing
     , total, multiple, all, current, playerNumber
     , NoStoredState
     , GameState(..), storeStateForCurrentPlayer, stateForCurrentPlayer, storeStateForPlayer, stateForPlayer, storeState, state
-    , setHighscores
+    , isHighscore, setHighscores
     )
 
 {-| A module to manage one or more players in a game.
@@ -1745,6 +1745,11 @@ setHighscores highscores_ players =
             highscores_
         )
         players
+
+
+isHighscore : Int -> Players a -> Bool
+isHighscore score_ =
+    Scores.isHighscore score_ << highscores
 
 
 {-| Get the [Score](Shared.Scores#Score) for the current [Player](#Player).
