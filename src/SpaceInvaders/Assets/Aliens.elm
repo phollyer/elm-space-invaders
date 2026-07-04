@@ -162,17 +162,12 @@ init level difficulty =
         { rows = rows_
         , state = WaitingToMove
         , laserIndices = []
-        , maxLasers =
-            difficulty
-                |> calculateMaxLasers
-                    level
+        , maxLasers = calculateMaxLasers level difficulty
         , animation =
             rows_
                 |> Tuple.first
                 |> Tuple.first
-                |> Animation.init
-                    level
-                    difficulty
+                |> Animation.init level difficulty
         }
 
 
@@ -186,8 +181,7 @@ initRows =
     let
         rows_ =
             List.range 0 4
-                |> List.map
-                    initRow
+                |> List.map initRow
                 |> List.reverse
     in
     ( ( rows_
@@ -200,10 +194,8 @@ initRows =
                 )
                 0
       , rows_
-            |> List.map
-                Tuple.first
-            |> List.map
-                Tuple.second
+            |> List.map Tuple.first
+            |> List.map Tuple.second
             |> BoundingBox.fromList
       )
     , rows_
@@ -215,14 +207,11 @@ initRow rowIndex =
     let
         aliens =
             List.range 0 9
-                |> List.map
-                    (initAlien rowIndex)
+                |> List.map (initAlien rowIndex)
     in
-    ( ( aliens
-            |> List.length
+    ( ( List.length aliens
       , aliens
-            |> List.map
-                .boundingBox
+            |> List.map .boundingBox
             |> BoundingBox.fromList
       )
     , aliens
@@ -235,9 +224,9 @@ initAlien y x =
         point =
             Point.zero
                 |> Point.moveToX
-                    ((x |> toFloat) * config.spacing * 2)
+                    (toFloat x * config.spacing * 2)
                 |> Point.moveToY
-                    (((y |> toFloat) * config.spacing * 2)
+                    ((toFloat y * config.spacing * 2)
                         + config.height
                         + Configs.mothership.height
                     )
@@ -246,10 +235,8 @@ initAlien y x =
     , boundingBox =
         point
             |> BoundingBox.fromPoint
-            |> BoundingBox.incrementRight
-                config.width
-            |> BoundingBox.incrementBottom
-                config.height
+            |> BoundingBox.incrementRight config.width
+            |> BoundingBox.incrementBottom config.height
     , score = 10
     }
 
@@ -260,29 +247,25 @@ calculateMaxLasers level difficulty =
         maximum =
             case difficulty of
                 Easy ->
-                    level
-                        |> Level.number
+                    Level.number level
 
                 Medium ->
-                    level
-                        |> Level.number
+                    Level.number level
                         |> toFloat
                         |> (*) 1.25
                         |> round
 
                 Hard ->
-                    level
-                        |> Level.number
+                    Level.number level
                         |> toFloat
                         |> (*) 1.75
                         |> round
     in
-    case maximum > 10 of
-        True ->
-            10
+    if maximum > 10 then
+        10
 
-        False ->
-            maximum
+    else
+        maximum
 
 
 
@@ -308,57 +291,44 @@ If more than the required time has passed since the last move, then the
 -}
 maybeMove : TimeDelta -> Aliens -> Aliens
 maybeMove timeDelta aliens =
-    case aliens |> animation |> Animation.timeToMove timeDelta of
-        True ->
-            let
-                direction_ =
-                    aliens
-                        |> selectDirection
-            in
-            aliens
-                |> updateState
-                    Moved
-                |> updateRows
-                    (aliens
-                        |> rows
-                        |> moveRows
-                            direction_
-                    )
-                |> updateAnimation
-                    (aliens
-                        |> animation
-                        |> Animation.move
-                            direction_
-                    )
+    if Animation.timeToMove timeDelta (animation aliens) then
+        let
+            direction_ =
+                selectDirection aliens
+        in
+        aliens
+            |> updateState Moved
+            |> updateRows
+                (rows aliens
+                    |> moveRows direction_
+                )
+            |> updateAnimation
+                (animation aliens
+                    |> Animation.move direction_
+                )
 
-        False ->
-            aliens
-                |> updateState
-                    WaitingToMove
-                |> updateAnimation
-                    (aliens
-                        |> animation
-                        |> Animation.addTimeDelta
-                            timeDelta
-                    )
+    else
+        aliens
+            |> updateState WaitingToMove
+            |> updateAnimation
+                (animation aliens
+                    |> Animation.addTimeDelta timeDelta
+                )
 
 
 selectDirection : Aliens -> Direction
 selectDirection aliens =
-    case aliens |> atABoundary of
-        True ->
-            aliens
-                |> selectDirectionByBoundary
+    if atABoundary aliens then
+        selectDirectionByBoundary aliens
 
-        False ->
-            aliens
-                |> animation
-                |> Animation.selectHorizontal
+    else
+        animation aliens
+            |> Animation.selectHorizontal
 
 
 atABoundary : Aliens -> Bool
 atABoundary aliens =
-    (aliens |> reachedLeftBoundary) || (aliens |> reachedRightBoundary)
+    reachedLeftBoundary aliens || reachedRightBoundary aliens
 
 
 type Boundary
@@ -368,36 +338,33 @@ type Boundary
 
 selectDirectionByBoundary : Aliens -> Direction
 selectDirectionByBoundary aliens =
-    case aliens |> whichBoundary of
+    case whichBoundary aliens of
         LeftSide ->
-            aliens
-                |> animation
+            animation aliens
                 |> Animation.selectRightOrDown
 
         RightSide ->
-            aliens
-                |> animation
+            animation aliens
                 |> Animation.selectLeftOrDown
 
 
 whichBoundary : Aliens -> Boundary
 whichBoundary aliens =
-    case aliens |> reachedRightBoundary of
-        True ->
-            RightSide
+    if reachedRightBoundary aliens then
+        RightSide
 
-        False ->
-            LeftSide
+    else
+        LeftSide
 
 
 reachedLeftBoundary : Aliens -> Bool
 reachedLeftBoundary aliens =
-    (aliens |> boundingBox |> BoundingBox.left) <= Configs.view.boundaryLeft
+    (boundingBox aliens |> BoundingBox.left) <= Configs.view.boundaryLeft
 
 
 reachedRightBoundary : Aliens -> Bool
 reachedRightBoundary aliens =
-    (aliens |> boundingBox |> BoundingBox.right) >= Configs.view.boundaryRight
+    (boundingBox aliens |> BoundingBox.right) >= Configs.view.boundaryRight
 
 
 moveRows : Direction -> Rows -> Rows
@@ -408,13 +375,11 @@ moveRows direction_ rows_ =
       , rows_
             |> Tuple.first
             |> Tuple.second
-            |> Movement.moveBox
-                direction_
+            |> Movement.moveBox direction_
       )
     , rows_
         |> Tuple.second
-        |> List.map
-            (moveRow direction_)
+        |> List.map (moveRow direction_)
     )
 
 
@@ -426,13 +391,11 @@ moveRow direction_ row =
       , row
             |> Tuple.first
             |> Tuple.second
-            |> Movement.moveBox
-                direction_
+            |> Movement.moveBox direction_
       )
     , row
         |> Tuple.second
-        |> List.map
-            (Movement.move direction_)
+        |> List.map (Movement.move direction_)
     )
 
 
@@ -450,36 +413,27 @@ fell. Or so I was told by a friend in the pub ;-) )_
 -}
 maybeChangeSpeed : Aliens -> Aliens
 maybeChangeSpeed aliens =
-    case aliens |> needToChangeSpeed of
-        True ->
-            aliens
-                |> changeSpeed
+    if needToChangeSpeed aliens then
+        changeSpeed aliens
 
-        False ->
-            aliens
+    else
+        aliens
 
 
 needToChangeSpeed : Aliens -> Bool
 needToChangeSpeed aliens =
     aliens
         |> animation
-        |> Animation.needToChangeSpeed
-            (aliens
-                |> remaining
-            )
+        |> Animation.needToChangeSpeed (remaining aliens)
 
 
 changeSpeed : Aliens -> Aliens
 changeSpeed aliens =
-    aliens
-        |> updateAnimation
-            (aliens
-                |> animation
-                |> Animation.changeSpeed
-                    (aliens
-                        |> remaining
-                    )
-            )
+    updateAnimation
+        (animation aliens
+            |> Animation.changeSpeed (remaining aliens)
+        )
+        aliens
 
 
 
@@ -511,57 +465,43 @@ maybeNewLasers : (List Index -> msg) -> List a -> Aliens -> Cmd msg
 maybeNewLasers msg currentLasers aliens =
     let
         currentTotal =
-            currentLasers
-                |> List.length
+            List.length currentLasers
     in
-    case aliens |> newLasersRequired currentTotal of
-        True ->
-            Random.generate
-                msg
-                (indicesGenerator
-                    ((aliens |> maxLasers) - currentTotal)
-                    (aliens
-                        |> remaining
-                    )
-                )
+    if newLasersRequired currentTotal aliens then
+        Random.generate
+            msg
+            (indicesGenerator
+                (maxLasers aliens - currentTotal)
+                (remaining aliens)
+            )
 
-        False ->
-            Cmd.none
+    else
+        Cmd.none
 
 
 indicesGenerator : Int -> Int -> Random.Generator (List Int)
 indicesGenerator max remaining_ =
-    Random.int
-        0
-        max
-        |> Random.andThen
-            (remaining_
-                |> selectIndices
-            )
+    Random.int 0 max
+        |> Random.andThen (selectIndices remaining_)
 
 
 selectIndices : Int -> Int -> Random.Generator (List Int)
 selectIndices remaining_ total =
-    remaining_
-        |> Random.int
-            0
-        |> Random.list
-            total
+    Random.int 0 remaining_
+        |> Random.list total
 
 
 newLasersRequired : Int -> Aliens -> Bool
 newLasersRequired currentTotal aliens =
-    currentTotal < (aliens |> maxLasers)
+    currentTotal < maxLasers aliens
 
 
 {-| Store the [indices](#Index) of the [Aliens](#Aliens) that were selected by
 [maybeNewLasers](#maybeNewLasers).
 -}
 loadLasers : List Index -> Aliens -> Aliens
-loadLasers indices aliens =
-    aliens
-        |> updateLaserIndices
-            indices
+loadLasers =
+    updateLaserIndices
 
 
 {-| [Aliens](#Aliens) are only allowed to fire
@@ -585,16 +525,10 @@ unchanged.
 -}
 maybeFire : Aliens -> ( List Point, Aliens )
 maybeFire aliens =
-    case aliens |> state of
+    case state aliens of
         Moved ->
-            ( aliens
-                |> list
-                |> positionLasers
-                    (aliens
-                        |> laserIndices
-                    )
-            , aliens
-                |> emptyLasers
+            ( positionLasers (laserIndices aliens) (list aliens)
+            , updateLaserIndices [] aliens
             )
 
         WaitingToMove ->
@@ -605,38 +539,13 @@ maybeFire aliens =
 
 positionLasers : List Int -> List Alien -> List Point
 positionLasers list_ aliens =
-    case list_ of
-        [] ->
-            []
-
-        _ ->
-            let
-                aliensArray =
-                    aliens
-                        |> Array.fromList
-            in
-            list_
-                |> List.filterMap
-                    (positionLaser aliensArray)
+    List.filterMap (positionLaser (Array.fromList aliens)) list_
 
 
 positionLaser : Array Alien -> Int -> Maybe Point
 positionLaser aliens index =
-    case aliens |> Array.get index of
-        Just alien ->
-            alien.boundingBox
-                |> BoundingBox.center
-                |> Just
-
-        Nothing ->
-            Nothing
-
-
-emptyLasers : Aliens -> Aliens
-emptyLasers aliens =
-    aliens
-        |> updateLaserIndices
-            []
+    Array.get index aliens
+        |> Maybe.map (\alien -> BoundingBox.center alien.boundingBox)
 
 
 
@@ -646,42 +555,38 @@ emptyLasers aliens =
 {-| -}
 anyLeft : Aliens -> Bool
 anyLeft aliens =
-    (aliens |> remaining) > 0
+    remaining aliens > 0
 
 
 {-| -}
 aboveGround : Aliens -> Bool
 aboveGround aliens =
-    (aliens |> boundingBox |> BoundingBox.bottom) < Configs.ground.y
+    BoundingBox.bottom (boundingBox aliens) < Configs.ground.y
 
 
 {-| -}
 list : Aliens -> List Alien
-list aliens =
-    aliens
-        |> rows
-        |> Tuple.second
-        |> List.map
-            Tuple.second
-        |> List.concat
+list =
+    rows
+        >> Tuple.second
+        >> List.map Tuple.second
+        >> List.concat
 
 
 {-| -}
 boundingBox : Aliens -> BoundingBox
-boundingBox aliens =
-    aliens
-        |> rows
-        |> Tuple.first
-        |> Tuple.second
+boundingBox =
+    rows
+        >> Tuple.first
+        >> Tuple.second
 
 
 {-| -}
 remaining : Aliens -> Int
-remaining aliens =
-    aliens
-        |> rows
-        |> Tuple.first
-        |> Tuple.first
+remaining =
+    rows
+        >> Tuple.first
+        >> Tuple.first
 
 
 {-| -}
@@ -718,33 +623,25 @@ state (Aliens aliens) =
 updateRows : Rows -> Aliens -> Aliens
 updateRows rows_ (Aliens aliens) =
     Aliens
-        { aliens
-            | rows = rows_
-        }
+        { aliens | rows = rows_ }
 
 
 updateAnimation : Animation -> Aliens -> Aliens
 updateAnimation animation_ (Aliens aliens) =
     Aliens
-        { aliens
-            | animation = animation_
-        }
+        { aliens | animation = animation_ }
 
 
 updateLaserIndices : List Int -> Aliens -> Aliens
 updateLaserIndices indices (Aliens aliens) =
     Aliens
-        { aliens
-            | laserIndices = indices
-        }
+        { aliens | laserIndices = indices }
 
 
 updateState : State -> Aliens -> Aliens
 updateState state_ (Aliens aliens) =
     Aliens
-        { aliens
-            | state = state_
-        }
+        { aliens | state = state_ }
 
 
 
@@ -756,16 +653,14 @@ updateState state_ (Aliens aliens) =
 -}
 playSFX : Aliens -> Bool
 playSFX aliens =
-    (aliens |> state) == Moved
+    state aliens == Moved
 
 
 {-| The sound effect to play.
 -}
 sfx : Aliens -> Sound
-sfx aliens =
-    aliens
-        |> animation
-        |> Animation.createSFX
+sfx =
+    animation >> Animation.createSFX
 
 
 
@@ -777,11 +672,8 @@ sfx aliens =
 [SVG](https://package.elm-lang.org/packages/elm/svg/latest/) data.
 -}
 view : Aliens -> List (Svg msg)
-view aliens =
-    aliens
-        |> list
-        |> List.map
-            viewAlien
+view =
+    list >> List.map viewAlien
 
 
 viewAlien : Alien -> Svg msg
