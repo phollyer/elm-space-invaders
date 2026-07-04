@@ -352,28 +352,36 @@ update msg game =
             )
 
         GameOverMsg _ ->
-            let
-                players_ =
-                    game
-                        |> players
-                        |> Players.gameOverForCurrentPlayer
+            case state game of
+                AllGamesOver ->
+                    ( game, Cmd.none )
 
-                scoreToSave =
-                    currentScoreForSave players_
-            in
-            ( game
-                |> updatePlayers players_
-                |> updateState GameOver
-                |> storePlayerState
-            , Cmd.batch
-                [ players_
-                    |> always scoreToSave
-                    |> Highscores.saveHighscore (cacheConfig game) HighscoresSaved
-                , SFX.init
-                    |> SFX.add (SFX.Mothership Stop)
-                    |> SFX.execute
-                ]
-            )
+                GameOver ->
+                    ( game, Cmd.none )
+
+                _ ->
+                    let
+                        players_ =
+                            game
+                                |> players
+                                |> Players.gameOverForCurrentPlayer
+
+                        scoreToSave =
+                            currentScoreForSave players_
+                    in
+                    ( game
+                        |> updatePlayers players_
+                        |> updateState GameOver
+                        |> storePlayerState
+                    , Cmd.batch
+                        [ players_
+                            |> always scoreToSave
+                            |> Highscores.saveHighscore (cacheConfig game) HighscoresSaved
+                        , SFX.init
+                            |> SFX.add (SFX.Mothership Stop)
+                            |> SFX.execute
+                        ]
+                    )
 
         HighscoresSaved (Ok _) ->
             ( setCacheError Nothing game
@@ -623,7 +631,7 @@ subscriptions game =
             if game |> players |> Players.current |> Players.lastLife then
                 Sub.batch
                     [ controls
-                    , Time.every 10 GameOverMsg
+                    , Time.every 250 GameOverMsg
                     ]
 
             else
