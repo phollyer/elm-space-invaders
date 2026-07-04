@@ -31,24 +31,14 @@ grass : Float -> Svg msg
 grass boundaryRight =
     let
         y =
-            config
-                |> .y
-                |> String.fromFloat
+            String.fromFloat groundLevel.y
     in
     line
         [ stroke "green"
         , y1 y
         , y2 y
-        , x1
-            (config
-                |> .boundaryLeft
-                |> String.fromFloat
-            )
-        , x2
-            (boundaryRight
-                - 1
-                |> String.fromFloat
-            )
+        , x1 (String.fromFloat groundLevel.boundaryLeft)
+        , x2 (String.fromFloat (boundaryRight - 1))
         ]
         []
 
@@ -56,36 +46,16 @@ grass boundaryRight =
 {-| -}
 soil : Float -> Svg msg
 soil boundaryRight =
-    let
-        width_ =
-            config
-    in
     rect
         [ fill "black"
-        , x
-            (config
-                |> .boundaryLeft
-                |> String.fromFloat
-            )
-        , y
-            (config
-                |> .y
-                |> String.fromFloat
-            )
-        , height
-            (config
-                |> .y
-                |> (+) 10
-                |> String.fromFloat
-            )
-        , width
-            (boundaryRight
-                |> String.fromFloat
-            )
+        , x (String.fromFloat groundLevel.boundaryLeft)
+        , y (String.fromFloat groundLevel.y)
+        , height (String.fromFloat (groundLevel.y + 10))
+        , width (String.fromFloat boundaryRight)
         ]
         []
 
 
-config : Configs.Ground
-config =
+groundLevel : Configs.Ground
+groundLevel =
     Configs.ground

@@ -103,9 +103,7 @@ init : Level -> Difficulty -> Remaining -> Animation
 init level difficulty total =
     let
         config_ =
-            difficulty
-                |> initConfig
-                    level
+            initConfig level difficulty
     in
     Animation
         { config = config_
@@ -114,13 +112,8 @@ init level difficulty total =
         , previousDirection = Movement.Left 10
         , sfx = Left
         , sfxIndex = 1
-        , velocity =
-            config_
-                |> initSpeed
-                    total
-        , nextSpeedChange =
-            total
-                |> getNextSpeedChange
+        , velocity = initSpeed total config_
+        , nextSpeedChange = getNextSpeedChange total
         }
 
 
@@ -131,9 +124,7 @@ configs =
 
 initSpeed : Int -> Dict Int Speed -> Speed
 initSpeed total config_ =
-    config_
-        |> Dict.get
-            total
+    Dict.get total config_
         |> Maybe.withDefault
             { distance = 0
             , time = 0
@@ -143,19 +134,16 @@ initSpeed total config_ =
 getNextSpeedChange : Int -> Int
 getNextSpeedChange current =
     [ 40, 30, 20, 10, 5, 3, 1 ]
-        |> List.filter
-            (\i -> i < current)
+        |> List.filter (\i -> i < current)
         |> List.head
-        |> Maybe.withDefault
-            40
+        |> Maybe.withDefault 40
 
 
 initConfig : Level -> Difficulty -> Dict Int Speed
 initConfig level difficulty =
     let
         levelNumber =
-            level
-                |> Level.number
+            Level.number level
                 |> toFloat
 
         ( time_, divisor ) =
@@ -173,51 +161,42 @@ initConfig level difficulty =
             1000 - (levelNumber * time_)
 
         time =
-            case pauseTime < 10 of
-                True ->
-                    10
+            if pauseTime < 10 then
+                10
 
-                False ->
-                    pauseTime
+            else
+                pauseTime
     in
     Dict.empty
-        |> Dict.insert
-            50
+        |> Dict.insert 50
             { distance = 10
             , time = time / divisor
             }
-        |> Dict.insert
-            40
+        |> Dict.insert 40
             { distance = 8
             , time = time / (divisor * 1.25)
             }
-        |> Dict.insert
-            30
+        |> Dict.insert 30
             { distance = 7
             , time = time / (divisor * 2.5)
             }
-        |> Dict.insert
-            20
+        |> Dict.insert 20
             { distance = 6
             , time = time / (divisor * 5)
             }
-        |> Dict.insert
-            10
+        |> Dict.insert 10
             { distance = 5
             , time = time / (divisor * 10)
             }
-        |> Dict.insert
-            5
+        |> Dict.insert  5
             { distance = 6
             , time = time / (divisor * 20)
             }
-        |> Dict.insert
-            3
+        |> Dict.insert 3
             { distance = 6
             , time = time / (divisor * 40)
             }
-        |> Dict.insert
-            1
+        |> Dict.insert 1
             { distance = 7
             , time = time / (divisor * 40)
             }
@@ -233,18 +212,10 @@ initConfig level difficulty =
 move : Direction -> Animation -> Animation
 move direction animation =
     animation
-        |> updateCurrentDirection
-            direction
-        |> updatePreviousDirection
-            (animation
-                |> currentDirection
-            )
-        |> updateSFXStep
-            (animation
-                |> toggleSFX
-            )
-        |> updateTimeSinceLastFrame
-            0
+        |> updateCurrentDirection direction
+        |> updatePreviousDirection (currentDirection animation)
+        |> updateSFXStep (toggleSFX animation)
+        |> updateTimeSinceLastFrame 0
 
 
 {-| A type alias representing the amount of time passed since the last
@@ -263,7 +234,7 @@ type alias TimeDelta =
 -}
 timeToMove : TimeDelta -> Animation -> Bool
 timeToMove delta animation =
-    ((animation |> timeSinceLastFrame) + delta) >= (animation |> velocity |> .time)
+    (timeSinceLastFrame animation + delta) >= (velocity animation).time
 
 
 {-| It's not time for the [Aliens](SpaceInvaders.Assets.Aliens#Aliens) to move
@@ -271,16 +242,16 @@ yet, so add the [TimeDelta](#TimeDelta) to the current running total.
 -}
 addTimeDelta : TimeDelta -> Animation -> Animation
 addTimeDelta delta animation =
-    animation
-        |> updateTimeSinceLastFrame
-            ((animation |> timeSinceLastFrame) + delta)
+    updateTimeSinceLastFrame
+        (timeSinceLastFrame animation + delta)
+        animation
 
 
 {-| Determine it there is a need to change the current [Speed](#Speed).
 -}
 needToChangeSpeed : Remaining -> Animation -> Bool
 needToChangeSpeed remaining animation =
-    (animation |> nextSpeedChange) == remaining
+    nextSpeedChange animation == remaining
 
 
 {-| Change the current [Speed](#Speed) based on the number of
@@ -289,29 +260,17 @@ needToChangeSpeed remaining animation =
 changeSpeed : Remaining -> Animation -> Animation
 changeSpeed remaining animation =
     animation
-        |> updateSpeed
-            (animation
-                |> getSpeed
-                    remaining
-            )
+        |> updateSpeed (getSpeed remaining animation)
         |> updateNextSpeedChange
-            (animation
-                |> nextSpeedChange
+            (nextSpeedChange animation
                 |> getNextSpeedChange
             )
-        |> updateSFXIndex
-            (animation
-                |> sfxIndex
-                |> (+) 1
-            )
+        |> updateSFXIndex (sfxIndex animation + 1)
 
 
 getSpeed : Int -> Animation -> Speed
 getSpeed remaining_ animation =
-    animation
-        |> config
-        |> Dict.get
-            remaining_
+    Dict.get remaining_ (config animation)
         |> Maybe.withDefault
             { distance = 0
             , time = 0
@@ -334,9 +293,9 @@ opposite [Direction](Shared.Movement#Direction).
 -}
 selectHorizontal : Animation -> Direction
 selectHorizontal animation =
-    case animation |> currentDirection of
+    case currentDirection animation of
         Movement.Down _ ->
-            case animation |> previousDirection of
+            case previousDirection animation of
                 Movement.Left distance ->
                     Movement.Right distance
 
@@ -347,8 +306,7 @@ selectHorizontal animation =
                     Movement.Stop
 
         _ ->
-            animation
-                |> currentDirection
+            currentDirection animation
 
 
 {-| Select a [Direction](Shared.Movement#Direction) of travel.
@@ -362,13 +320,10 @@ boundary, or [Left](Shared.Movement#Direction) after moving
 -}
 selectLeftOrDown : Animation -> Direction
 selectLeftOrDown animation =
-    case animation |> currentDirection of
+    case currentDirection animation of
         Movement.Down _ ->
             Movement.Left
-                (animation
-                    |> velocity
-                    |> .distance
-                )
+                (velocity animation).distance
 
         _ ->
             Movement.Down configs.stepDown
@@ -385,13 +340,10 @@ boundary, or [Right](Shared.Movement#Direction) after moving
 -}
 selectRightOrDown : Animation -> Direction
 selectRightOrDown animation =
-    case animation |> currentDirection of
+    case currentDirection animation of
         Movement.Down _ ->
             Movement.Right
-                (animation
-                    |> velocity
-                    |> .distance
-                )
+                (velocity animation).distance
 
         _ ->
             Movement.Down configs.stepDown
@@ -405,17 +357,13 @@ selectRightOrDown animation =
 createSFX : Animation -> Sound
 createSFX animation =
     SFX.Alien
-        (animation
-            |> sfxToString
-        )
-        (animation
-            |> sfxIndex
-        )
+        (sfxToString animation)
+        (sfxIndex animation)
 
 
 toggleSFX : Animation -> SFX
 toggleSFX animation =
-    case animation |> sfx of
+    case sfx animation of
         Left ->
             Right
 
@@ -425,7 +373,7 @@ toggleSFX animation =
 
 sfxToString : Animation -> String
 sfxToString animation =
-    case animation |> sfx of
+    case sfx animation of
         Left ->
             "Left"
 
@@ -484,33 +432,25 @@ velocity (Animation animation) =
 updateTimeSinceLastFrame : Float -> Animation -> Animation
 updateTimeSinceLastFrame time (Animation animation) =
     Animation
-        { animation
-            | timeSinceLastFrame = time
-        }
+        { animation | timeSinceLastFrame = time }
 
 
 updateCurrentDirection : Direction -> Animation -> Animation
 updateCurrentDirection direction (Animation animation) =
     Animation
-        { animation
-            | currentDirection = direction
-        }
+        { animation | currentDirection = direction }
 
 
 updatePreviousDirection : Direction -> Animation -> Animation
 updatePreviousDirection direction (Animation animation) =
     Animation
-        { animation
-            | previousDirection = direction
-        }
+        { animation | previousDirection = direction }
 
 
 updateSFXStep : SFX -> Animation -> Animation
 updateSFXStep sfx_ (Animation animation) =
     Animation
-        { animation
-            | sfx = sfx_
-        }
+        { animation | sfx = sfx_ }
 
 
 updateSFXIndex : Int -> Animation -> Animation
@@ -518,26 +458,21 @@ updateSFXIndex index (Animation animation) =
     Animation
         { animation
             | sfxIndex =
-                case index > 4 of
-                    True ->
-                        4
+                if index > 4 then
+                    4
 
-                    False ->
-                        index
+                else
+                    index
         }
 
 
 updateSpeed : Speed -> Animation -> Animation
 updateSpeed velocity_ (Animation animation) =
     Animation
-        { animation
-            | velocity = velocity_
-        }
+        { animation | velocity = velocity_ }
 
 
 updateNextSpeedChange : Int -> Animation -> Animation
 updateNextSpeedChange num (Animation animation) =
     Animation
-        { animation
-            | nextSpeedChange = num
-        }
+        { animation | nextSpeedChange = num }

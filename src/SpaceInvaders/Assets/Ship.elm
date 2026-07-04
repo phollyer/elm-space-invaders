@@ -174,14 +174,11 @@ maybeMoveLeft ship =
                 |> moveBoundingBox
                     Movement.Left
     in
-    case (movedBoundingBox |> BoundingBox.left) >= leftBoundary of
-        True ->
-            ship
-                |> updateBoundingBox
-                    movedBoundingBox
+    if BoundingBox.left movedBoundingBox >= leftBoundary then
+        updateBoundingBox movedBoundingBox ship
 
-        False ->
-            ship
+    else
+        ship
 
 
 maybeMoveRight : Ship -> Ship
@@ -192,14 +189,11 @@ maybeMoveRight ship =
                 |> moveBoundingBox
                     Movement.Right
     in
-    case (movedBoundingBox |> BoundingBox.right) <= rightBoundary of
-        True ->
-            ship
-                |> updateBoundingBox
-                    movedBoundingBox
+    if BoundingBox.right movedBoundingBox <= rightBoundary then
+        updateBoundingBox movedBoundingBox ship
 
-        False ->
-            ship
+    else
+        ship
 
 
 moveBoundingBox : (Float -> Direction) -> Ship -> BoundingBox

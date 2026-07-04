@@ -14,7 +14,6 @@ import Element as El exposing (DeviceClass(..), Element, Orientation(..), alignL
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
-import Html.Events.Extra.Touch as Touch
 import ResponsiveUI as RUI exposing (DefaultView(..), Option(..), Viewport)
 import ResponsiveUI.Element as Rel
 import ResponsiveUI.Element.Font as RFont

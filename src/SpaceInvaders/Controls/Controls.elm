@@ -56,8 +56,7 @@ import SpaceInvaders.Controls.Touch.Left as TouchLeft
 import SpaceInvaders.Controls.Touch.Pause as TouchPause
 import SpaceInvaders.Controls.Touch.Resume as TouchResume
 import SpaceInvaders.Controls.Touch.Right as TouchRight
-import Svg exposing (Svg, circle, defs, g, image, linearGradient, path, radialGradient, rect, stop, svg)
-import Svg.Attributes as SA exposing (cx, cy, d, gradientUnits, height, id, offset, r, rotate, rx, stopColor, viewBox, width, x, x1, x2, xlinkHref, y, y1, y2)
+import Svg.Attributes exposing (width)
 
 
 

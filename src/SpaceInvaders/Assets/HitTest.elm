@@ -56,48 +56,33 @@ as follows:
 -}
 detectPlayerHitAlien : Aliens -> Laser -> ( Aliens, Bool, Int )
 detectPlayerHitAlien aliens laser =
-    case laser |> Laser.isActive of
-        True ->
-            let
-                pruner =
-                    aliens
-                        |> Aliens.rows
-                        |> detectHit
-                            (laser
-                                |> Laser.boundingBox
-                            )
-            in
-            case pruner.hit of
-                Miss ->
-                    ( aliens
-                    , False
-                    , 0
-                    )
+    if Laser.isActive laser then
+        let
+            pruner =
+                detectHit
+                    (Laser.boundingBox laser)
+                    (Aliens.rows aliens)
+        in
+        case pruner.hit of
+            Miss ->
+                ( aliens, False, 0 )
 
-                Resting _ ->
-                    ( aliens
-                    , False
-                    , 0
-                    )
+            Resting _ ->
+                ( aliens, False, 0 )
 
-                _ ->
-                    ( aliens
-                        |> Aliens.updateRows
-                            pruner.targetRows
-                    , True
-                    , case pruner.targetHit of
-                        Just asset ->
-                            asset.score
+            _ ->
+                ( Aliens.updateRows pruner.targetRows aliens
+                , True
+                , case pruner.targetHit of
+                    Just asset ->
+                        asset.score
 
-                        Nothing ->
-                            0
-                    )
+                    Nothing ->
+                        0
+                )
 
-        False ->
-            ( aliens
-            , False
-            , 0
-            )
+    else
+        ( aliens, False, 0 )
 
 
 {-| Detect if a player's laser hits a

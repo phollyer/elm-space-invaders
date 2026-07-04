@@ -59,7 +59,6 @@ import Shared.BoundingBox as BoundingBox exposing (BoundingBox)
 import Shared.Movement as Movement exposing (Direction)
 import SpaceInvaders.Assets.Bunkers exposing (Bunkers)
 import SpaceInvaders.Assets.Laser as Laser exposing (Laser)
-import SpaceInvaders.Configs as Configs
 import Svg exposing (Svg)
 
 

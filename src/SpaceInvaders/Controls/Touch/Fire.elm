@@ -1,7 +1,7 @@
 module SpaceInvaders.Controls.Touch.Fire exposing (view)
 
 import Element as El exposing (Element)
-import Svg exposing (Svg, image, svg)
+import Svg exposing (image, svg)
 import Svg.Attributes exposing (height, width, x, xlinkHref, y)
 
 

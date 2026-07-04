@@ -59,11 +59,11 @@ who shot it.
 
 import Shared.BoundingBox as BoundingBox exposing (BoundingBox)
 import Shared.Movement as Movement exposing (Direction(..))
-import Shared.Point as Point exposing (Point)
+import Shared.Point exposing (Point)
 import SpaceInvaders.Assets.Bunkers exposing (Bunkers)
 import SpaceInvaders.Configs as Configs
 import Svg exposing (Svg, line)
-import Svg.Attributes as SA exposing (stroke, x1, x2, y1, y2)
+import Svg.Attributes exposing (stroke, x1, x2, y1, y2)
 
 
 

@@ -65,7 +65,7 @@ import Shared.Point as Point exposing (Point)
 import SpaceInvaders.Configs as Configs
 import SpaceInvaders.SFX as SFX exposing (Sound(..), Status(..))
 import Svg exposing (Svg, g, path, svg)
-import Svg.Attributes exposing (d, enableBackground, fill, height, transform, viewBox, width, x, y)
+import Svg.Attributes exposing (d, fill, height, transform, viewBox, width, x, y)
 import Time
 
 
