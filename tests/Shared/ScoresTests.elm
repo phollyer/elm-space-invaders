@@ -2,7 +2,7 @@ module Shared.ScoresTests exposing (suite)
 
 import Expect
 import Fuzz exposing (intRange)
-import Shared.Scores as Scores exposing (Score, Scores)
+import Shared.Scores as Scores exposing (Scores)
 import Test exposing (Test, describe, fuzz, fuzz2, test)
 
 
@@ -26,12 +26,10 @@ suite =
                         |> Expect.equal total
             , fuzz2 (intRange 1 10) (intRange 10 100) "with too many highscores" <|
                 \total range ->
-                    Scores.init
-                        total
-                        (range
-                            |> List.range 10
+                    Scores.init total
+                        (List.range 10 range
                             |> List.map
-                                (\index ->
+                                (\_ ->
                                     { name = ""
                                     , points = 0
                                     }

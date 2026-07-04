@@ -11,3 +11,9 @@ elm.js
 *.key
 
 
+node_modules
+
+*.gz
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

@@ -118,7 +118,7 @@ suite =
             ]
         , describe "Point.moveDown"
             [ fuzz2 float float "increments the Y Coordinate by the specified amount" <|
-                \x y ->
+                \_ y ->
                     Point.zero
                         |> Point.moveDown y
                         |> Point.y

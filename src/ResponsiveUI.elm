@@ -164,7 +164,7 @@ package, these are the functions to play with.
 
 import Browser.Dom
 import Browser.Events exposing (onResize)
-import Element exposing (Device, DeviceClass(..), Element, Orientation(..))
+import Element exposing (Device, DeviceClass(..), Orientation(..))
 import Task
 
 
@@ -371,32 +371,21 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         InitViewport window ->
-            model
-                |> updateViewport
-                    (model
-                        |> viewport
-                        |> changedSize
-                            window.viewport
-                    )
+            updateViewport <|
+                changedSize window.viewport <|
+                    viewport model
 
         Resize width_ height_ ->
-            model
-                |> updateViewport
-                    (model
-                        |> viewport
-                        |> changedSize
-                            { height =
-                                height_
-                                    |> toFloat
-                            , width =
-                                width_
-                                    |> toFloat
-                            }
-                    )
+            updateViewport <|
+                changedSize
+                    { height = toFloat height_
+                    , width = toFloat width_
+                    }
+                    (viewport model)
 
 
-updateViewport : Viewport -> Model -> Model
-updateViewport viewport_ (Model model) =
+updateViewport : Viewport -> Model
+updateViewport viewport_ =
     Model
         { viewport = viewport_ }
 

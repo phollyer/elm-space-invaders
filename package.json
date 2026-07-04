@@ -1,0 +1,24 @@
+{
+  "name": "elm-space-invaders",
+  "version": "1.0.0",
+  "description": "Classic Space Invaders clone in Elm",
+  "private": true,
+  "main": "public/elm.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "elm make src/Main.elm --output public/elm.js",
+    "build:opt": "elm make src/Main.elm --optimize --output public/elm.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phollyer/elm-space-invaders.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/phollyer/elm-space-invaders/issues"
+  },
+  "homepage": "https://github.com/phollyer/elm-space-invaders#readme"
+}

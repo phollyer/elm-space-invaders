@@ -6,16 +6,12 @@ module Extras.String exposing
 
 ellipsis : Int -> String -> String
 ellipsis maxLength str =
-    case (str |> String.length) > maxLength of
-        True ->
-            (str
-                |> String.left
-                    maxLength
-            )
-                ++ "..."
+    if String.length str > maxLength then
+        String.left maxLength str
+            ++ "..."
 
-        False ->
-            str
+    else
+        str
 
 
 replaceIfEmpty : String -> String -> String
